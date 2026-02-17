@@ -45,6 +45,34 @@ cytokines = [c for c in df.columns if c.endswith("_ESC")]
 variable = st.selectbox("Variable", cytokines)
 
 # --------------------------
+# LIMPIAR NaN en grupo
+# --------------------------
+df_use = df_use[df_use[strat].notna()]
+
+# ordenar tiempo
+orden_tiempo = ["basal","post","mantenimiento"]
+df_use["Tiempo"] = pd.Categorical(df_use["Tiempo"],
+                                   categories=orden_tiempo,
+                                   ordered=True)
+
+# crear variable combinada Tiempo + Grupo
+df_use["Tiempo_Grupo"] = df_use["Tiempo"].astype(str) + "_" + df_use[strat].astype(str)
+
+# orden manual
+grupos = sorted(df_use[strat].unique())
+orden_combinado = []
+
+for t in orden_tiempo:
+    for g in grupos:
+        orden_combinado.append(f"{t}_{g}")
+
+df_use["Tiempo_Grupo"] = pd.Categorical(
+    df_use["Tiempo_Grupo"],
+    categories=orden_combinado,
+    ordered=True
+)
+
+# --------------------------
 # GRAFICO
 # --------------------------
 
@@ -52,25 +80,23 @@ if unir_pacientes:
 
     fig = px.line(
         df_use,
-        x="Tiempo",
+        x="Tiempo_Grupo",
         y=variable,
         color=strat,
         line_group="Paciente",
         markers=True,
-        facet_col=strat,
-        category_orders={"Tiempo": orden_tiempo}
+        category_orders={"Tiempo_Grupo": orden_combinado}
     )
 
 else:
 
     fig = px.scatter(
         df_use,
-        x="Tiempo",
+        x="Tiempo_Grupo",
         y=variable,
         color=strat,
-        facet_col=strat,
         hover_data=["Paciente"],
-        category_orders={"Tiempo": orden_tiempo}
+        category_orders={"Tiempo_Grupo": orden_combinado}
     )
 
 fig.update_layout(
@@ -79,8 +105,4 @@ fig.update_layout(
     template="simple_white"
 )
 
-fig.for_each_annotation(lambda a: a.update(text=a.text.split("=")[-1]))
-
 st.plotly_chart(fig, use_container_width=True, key="main_plot")
-
-
