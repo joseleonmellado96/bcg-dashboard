@@ -2,39 +2,81 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 
+st.title("BCG Cytokine Dashboard")
+
 ruta = "CONCATENADO_TOTAL.xlsx"
-
-
 df = pd.read_excel(ruta)
 
-df["Tiempo"] = df["Tiempo"].astype(str).str.lower()
-df["resp"] = df["respuesta1/26"].astype(str).str.lower()
+# --------------------------
+# LIMPIEZA
+# --------------------------
 
+df["Tiempo"] = df["Tiempo"].astype(str).str.lower().str.strip()
+
+for col in ["score","riesgo","intolerancia","fumador","respuesta1/26"]:
+    if col in df.columns:
+        df[col] = df[col].astype(str).str.lower().str.strip()
+
+df["resp"] = df["respuesta1/26"]
+
+# --------------------------
+# SIDEBAR
+# --------------------------
+
+st.sidebar.header("Filtros")
+
+sample = st.sidebar.selectbox("Tipo de muestra", ["PlasmaPaciente","OrinaPaciente"])
+strat = st.sidebar.selectbox("Colorear por", ["resp","score","riesgo","intolerancia","fumador"])
+
+unir_pacientes = st.sidebar.checkbox("Unir muestras del mismo paciente")
+
+# --------------------------
+# FILTRADO
+# --------------------------
+
+df_use = df[df["TipoMuestra"] == sample].copy()
+
+# Orden correcto del tiempo
+orden_tiempo = ["basal","post","mantenimiento"]
+df_use["Tiempo"] = pd.Categorical(df_use["Tiempo"], categories=orden_tiempo, ordered=True)
+
+# Selección variable
 cytokines = [c for c in df.columns if c.endswith("_ESC")]
+variable = st.selectbox("Variable", cytokines)
 
-hemograma = [
-    "GB-B","GB-R","HEMOGL","HEMATOCR","EOSIN","LINF","MONOC",
-    "NEUTROFILOS","LINFOCITOS","SII INDEX","NLR"
-]
+# --------------------------
+# GRAFICO
+# --------------------------
 
-hemograma = [h for h in hemograma if h in df.columns]
+if unir_pacientes:
+    fig = px.line(
+        df_use,
+        x="Tiempo",
+        y=variable,
+        color=strat,
+        line_group="Paciente",
+        markers=True,
+        category_orders={"Tiempo": orden_tiempo}
+    )
+else:
+    fig = px.scatter(
+        df_use,
+        x="Tiempo",
+        y=variable,
+        color=strat,
+        hover_data=["Paciente"],
+        category_orders={"Tiempo": orden_tiempo}
+    )
 
-st.title("BCG – Dashboard exploratorio")
-
-sample = st.selectbox("Muestra", ["OrinaPaciente","PlasmaPaciente"])
-strat = st.selectbox("Color por", ["resp","score","riesgo","intolerancia","fumador"])
-feature = st.selectbox("Variable", cytokines + hemograma)
-
-df_use = df[df["TipoMuestra"] == sample]
-
-fig = px.strip(
-    df_use,
-    x="Tiempo",
-    y=feature,
-    color=strat,
-    hover_data=["Paciente"],
-    stripmode="overlay"
+fig.update_layout(
+    xaxis_title="Tiempo",
+    yaxis_title=variable,
+    template="simple_white"
 )
 
 st.plotly_chart(fig, use_container_width=True)
+
+
+st.plotly_chart(fig, use_container_width=True)
+
 
