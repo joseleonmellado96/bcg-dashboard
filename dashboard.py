@@ -2,7 +2,8 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 
-ruta = r"G:\Mi unidad\Doctorado_28.7.25\MAGPIX_AMBAS_LARGADAS\CONCATENADO_TOTAL.xlsx"
+ruta = "CONCATENADO_TOTAL.xlsx"
+
 
 df = pd.read_excel(ruta)
 
@@ -36,3 +37,4 @@ fig = px.strip(
 )
 
 st.plotly_chart(fig, use_container_width=True)
+
