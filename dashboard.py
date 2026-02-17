@@ -72,37 +72,79 @@ df_use["Tiempo_Grupo"] = pd.Categorical(
     ordered=True
 )
 
-# --------------------------
-# GRAFICO
-# --------------------------
+import plotly.graph_objects as go
+import numpy as np
 
-if unir_pacientes:
+# Orden correcto de tiempo
+orden_tiempo = ["basal","post","mantenimiento"]
+df_use = df_use[df_use["Tiempo"].isin(orden_tiempo)]
+df_use["Tiempo"] = pd.Categorical(df_use["Tiempo"],
+                                  categories=orden_tiempo,
+                                  ordered=True)
 
-    fig = px.line(
-        df_use,
-        x="Tiempo_Grupo",
-        y=variable,
-        color=strat,
-        line_group="Paciente",
-        markers=True,
-        category_orders={"Tiempo_Grupo": orden_combinado}
-    )
+# eliminar NaN reales
+df_use = df_use[df_use[variable].notna()]
 
-else:
+tipos = df_use["TipoMuestra"].unique()
 
-    fig = px.scatter(
-        df_use,
-        x="Tiempo_Grupo",
-        y=variable,
-        color=strat,
-        hover_data=["Paciente"],
-        category_orders={"Tiempo_Grupo": orden_combinado}
-    )
+# offsets para que no se solapen
+offsets = np.linspace(-0.3, 0.3, len(tipos))
+
+fig = go.Figure()
+
+for offset, tipo in zip(offsets, tipos):
+
+    df_tipo = df_use[df_use["TipoMuestra"] == tipo]
+
+    for tiempo in orden_tiempo:
+
+        sub = df_tipo[df_tipo["Tiempo"] == tiempo]
+        if len(sub) == 0:
+            continue
+
+        # posición x base
+        x_base = orden_tiempo.index(tiempo)
+
+        # jitter
+        x_vals = np.random.normal(
+            x_base + offset,
+            0.03,
+            len(sub)
+        )
+
+        # puntos
+        fig.add_trace(go.Scatter(
+            x=x_vals,
+            y=sub[variable],
+            mode="markers",
+            name=tipo,
+            legendgroup=tipo,
+            showlegend=(tiempo == "basal"),
+            marker=dict(size=8),
+            hovertext=sub["Paciente"]
+        ))
+
+        # línea media
+        mean_val = sub[variable].mean()
+
+        fig.add_trace(go.Scatter(
+            x=[x_base + offset - 0.08, x_base + offset + 0.08],
+            y=[mean_val, mean_val],
+            mode="lines",
+            line=dict(width=4),
+            showlegend=False
+        ))
 
 fig.update_layout(
-    xaxis_title="Tiempo",
+    xaxis=dict(
+        tickmode="array",
+        tickvals=[0,1,2],
+        ticktext=["BASAL","POST","MANTENIMIENTO"]
+    ),
     yaxis_title=variable,
-    template="simple_white"
+    xaxis_title="Tiempo",
+    template="simple_white",
+    height=600
 )
 
 st.plotly_chart(fig, use_container_width=True, key="main_plot")
