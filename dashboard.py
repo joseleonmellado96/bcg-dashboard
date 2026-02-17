@@ -49,6 +49,7 @@ variable = st.selectbox("Variable", cytokines)
 # --------------------------
 
 if unir_pacientes:
+
     fig = px.line(
         df_use,
         x="Tiempo",
@@ -56,14 +57,18 @@ if unir_pacientes:
         color=strat,
         line_group="Paciente",
         markers=True,
+        facet_col=strat,
         category_orders={"Tiempo": orden_tiempo}
     )
+
 else:
+
     fig = px.scatter(
         df_use,
         x="Tiempo",
         y=variable,
         color=strat,
+        facet_col=strat,
         hover_data=["Paciente"],
         category_orders={"Tiempo": orden_tiempo}
     )
@@ -74,9 +79,8 @@ fig.update_layout(
     template="simple_white"
 )
 
-st.plotly_chart(fig, use_container_width=True)
+fig.for_each_annotation(lambda a: a.update(text=a.text.split("=")[-1]))
 
-
-st.plotly_chart(fig, use_container_width=True)
+st.plotly_chart(fig, use_container_width=True, key="main_plot")
 
 
